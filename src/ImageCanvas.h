@@ -38,6 +38,9 @@ private:
     void FitImageToCanvas();            // Function to fit and center the image on load
     void ConstrainPan();                // Prevent image from being panned out of the visible area
 
+    static constexpr float MIN_ZOOM_FACTOR = 0.1f;  // Minimum zoom factor
+    static constexpr float MAX_ZOOM_FACTOR = 10.0f; // Maximum zoom factor
+
 //wxDECLARE_EVENT_TABLE();
 };
 
