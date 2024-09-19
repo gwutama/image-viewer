@@ -1,7 +1,7 @@
 #include "ImageCanvas.h"
 
 ImageCanvas::ImageCanvas(wxFrame* parent)
-        : wxPanel(parent), zoomFactor(1.0f), offsetX(0.0f), offsetY(0.0f), isPanning(false), imageLoaded(false)
+        : wxPanel(parent), zoomFactor(1.0f), offsetX(0.0f), offsetY(0.0f), imageLoaded(false)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);  // Enable repainting the canvas
     Bind(wxEVT_PAINT, &ImageCanvas::OnPaint, this);
