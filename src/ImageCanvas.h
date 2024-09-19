@@ -15,6 +15,9 @@ public:
 
     // Set zoom level manually
     void SetZoomLevel(float zoom);
+    float GetZoomLevel() { return zoomFactor; }
+
+    void CenterImageOnCanvas();
 
     // Fit the image to the canvas dimensions
     void FitImageToCanvas();

@@ -1,5 +1,5 @@
 #include <wx/wx.h>
-#include "ImageCanvas.h"
+#include "ImageEditor.h"
 #include <opencv2/opencv.hpp>
 
 class MyApp : public wxApp
@@ -14,7 +14,7 @@ public:
     MyFrame(const wxString& title);
 
 private:
-    ImageCanvas* canvas;
+    ImageEditor* editor;
 
     void OnOpen(wxCommandEvent& event);
     void CreateMenuBar();
@@ -25,7 +25,7 @@ wxIMPLEMENT_APP(MyApp);
 
 bool MyApp::OnInit()
 {
-    MyFrame* frame = new MyFrame("Image Viewer with wxGraphicsContext");
+    MyFrame* frame = new MyFrame("Image Viewer");
     frame->Show(true);
     frame->Maximize(true);  // Maximize the window on start
     return true;
@@ -34,19 +34,14 @@ bool MyApp::OnInit()
 MyFrame::MyFrame(const wxString& title)
         : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600))
 {
-    // Create the canvas
-    canvas = new ImageCanvas(this);
-
-    // Set zoom update callback
-    canvas->EnableGestures(true);
-    canvas->SetZoomCallback([this](float zoomLevel) { UpdateZoomStatus(zoomLevel); });
+    editor = new ImageEditor(this);
+    editor->Disable();  // Disable the editor until an image is loaded
 
     // Create the menu bar
     CreateMenuBar();
 
     // Create a status bar
     CreateStatusBar();
-    SetStatusText("Zoom: 100%");
 }
 
 void MyFrame::OnOpen(wxCommandEvent& event)
@@ -65,7 +60,8 @@ void MyFrame::OnOpen(wxCommandEvent& event)
     if (!image.empty())
     {
         // Load the image into the canvas
-        canvas->LoadImage(image);
+        editor->LoadImage(image);
+        editor->Enable();  // Enable the editor after loading the image
     }
     else
     {
@@ -85,10 +81,4 @@ void MyFrame::CreateMenuBar()
 
     menuBar->Append(fileMenu, "&File");
     SetMenuBar(menuBar);
-}
-
-void MyFrame::UpdateZoomStatus(float zoomLevel)
-{
-    wxString zoomText = wxString::Format("Zoom: %.0f%%", zoomLevel * 100);
-    SetStatusText(zoomText);
 }

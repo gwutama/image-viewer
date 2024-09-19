@@ -44,6 +44,16 @@ void ImageCanvas::SetZoomLevel(float zoom)
     Refresh();
 }
 
+void ImageCanvas::CenterImageOnCanvas()
+{
+    wxSize clientSize = GetClientSize();
+    float scaledWidth = wxImg.GetWidth() * zoomFactor;
+    float scaledHeight = wxImg.GetHeight() * zoomFactor;
+    offsetX = (clientSize.GetWidth() - scaledWidth) / 2.0f;
+    offsetY = (clientSize.GetHeight() - scaledHeight) / 2.0f;
+    Refresh();
+}
+
 void ImageCanvas::FitImageToCanvas()
 {
     if (!imageLoaded)

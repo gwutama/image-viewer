@@ -12,6 +12,7 @@ endif()
 set(SRC_FILES
         main.cpp
         ImageCanvas.cpp
+        ImageEditor.cpp
 )
 
 # Include directories
