@@ -199,24 +199,20 @@ void ImageCanvas::OnGestureZoom(wxZoomGestureEvent& evt)
     // Scale zoomDelta to smooth the zoom operation
     float newZoomFactor = std::clamp(zoomFactor * (1 + (zoomDelta - 1) * 0.2f), MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
 
-    // Update the zoom factor only if it has changed
-    if (std::fabs(newZoomFactor - zoomFactor) > 0.01f)
+    zoomFactor = newZoomFactor;
+
+    // Recalculate the offsets so that the point under the mouse stays under the mouse after zooming
+    offsetX = mousePos.x - mouseImageX * zoomFactor;
+    offsetY = mousePos.y - mouseImageY * zoomFactor;
+
+    // Update the zoom level in the status bar or UI if necessary
+    if (zoomCallback)
     {
-        zoomFactor = newZoomFactor;
-
-        // Recalculate the offsets so that the point under the mouse stays under the mouse after zooming
-        offsetX = mousePos.x - mouseImageX * zoomFactor;
-        offsetY = mousePos.y - mouseImageY * zoomFactor;
-
-        // Update the zoom level in the status bar or UI if necessary
-        if (zoomCallback)
-        {
-            zoomCallback(zoomFactor);
-        }
-
-        // Redraw the canvas with the new zoom level
-        Refresh();
+        zoomCallback(zoomFactor);
     }
+
+    // Redraw the canvas with the new zoom level
+    Refresh();
 }
 
 void ImageCanvas::UpdateTexture()
