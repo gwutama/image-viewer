@@ -124,9 +124,24 @@ void ImageCanvas::OnGestureZoom(wxZoomGestureEvent& evt)
 // Handle macOS pan gestures (left, right, up, down)
 void ImageCanvas::OnGesturePan(wxPanGestureEvent& evt)
 {
-    // Update offsets based on the pan gesture position
-    offsetX += evt.GetDelta().x;  // Use GetPosition().x for the pan gesture's X delta
-    offsetY += evt.GetDelta().y;  // Use GetPosition().y for the pan gesture's Y delta
+    // Set the cursor to hand grab during panning
+    if (evt.IsGestureStart())
+    {
+        SetCursor(wxCursor(wxCURSOR_HAND));
+    }
 
-    Refresh();  // Redraw the canvas after panning
+    // Update offsets based on the pan gesture position
+    offsetX += evt.GetDelta().x;  // Use GetDelta().x for the pan gesture's X delta
+    offsetY += evt.GetDelta().y;  // Use GetDelta().y for the pan gesture's Y delta
+
+    // Redraw the canvas after panning
+    Refresh();
+
+    // After handling the pan gesture, reset the cursor back to default (optional)
+    if (evt.IsGestureEnd())
+    {
+        SetCursor(wxNullCursor);
+    }
 }
+
+
