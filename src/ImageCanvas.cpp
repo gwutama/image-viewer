@@ -154,6 +154,7 @@ void ImageCanvas::OnMouseDown(wxMouseEvent& event)
 {
     if (event.LeftDown())
     {
+        SetCursor(wxCursor(wxCURSOR_HAND));
         isDragging = true;
         dragStartPos = event.GetPosition();
         lastOffsetX = offsetX;
@@ -165,6 +166,7 @@ void ImageCanvas::OnMouseUp(wxMouseEvent& event)
 {
     if (event.LeftUp())
     {
+        SetCursor(wxCursor(wxCURSOR_NONE));
         isDragging = false;
     }
 }
