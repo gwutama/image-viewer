@@ -38,6 +38,7 @@ MyFrame::MyFrame(const wxString& title)
     canvas = new ImageCanvas(this);
 
     // Set zoom update callback
+    canvas->EnableGestures(true);
     canvas->SetZoomCallback([this](float zoomLevel) { UpdateZoomStatus(zoomLevel); });
 
     // Create the menu bar

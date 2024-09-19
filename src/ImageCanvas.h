@@ -7,14 +7,23 @@
 class ImageCanvas : public wxPanel
 {
 public:
-    ImageCanvas(wxFrame* parent);
+    ImageCanvas(wxWindow* parent);  // Use wxWindow* instead of wxFrame* for flexibility
     ~ImageCanvas();
 
-    // Load a single image (no LOD)
+    // Load a single image
     void LoadImage(const cv::Mat& img);
+
+    // Set zoom level manually
+    void SetZoomLevel(float zoom);
+
+    // Fit the image to the canvas dimensions
+    void FitImageToCanvas();
 
     // Set a callback to update zoom level in the status bar
     void SetZoomCallback(std::function<void(float)> callback);
+
+    // Enable or disable touch gestures
+    void EnableGestures(bool enable);
 
 protected:
     void OnPaint(wxPaintEvent& evt);
@@ -23,21 +32,18 @@ protected:
     void OnGesturePan(wxPanGestureEvent& evt);
 
 private:
-    wxImage wxImg;                      // wxImage to store the loaded image
-    bool imageLoaded;                   // Flag to check if an image is loaded
+    wxImage wxImg;
+    bool imageLoaded;
 
-    float zoomFactor;                   // Zoom factor for the image
-    float offsetX, offsetY;             // Offset for panning and initial centering
-    float lastMouseX, lastMouseY;       // Track last mouse position for panning
+    float zoomFactor;
+    float offsetX, offsetY;
 
-    std::function<void(float)> zoomCallback;  // Callback to update the zoom level in status bar
+    std::function<void(float)> zoomCallback;
 
-    void FitImageToCanvas();            // Function to fit and center the image on load
+    static constexpr float MIN_ZOOM_FACTOR = 0.1f;
+    static constexpr float MAX_ZOOM_FACTOR = 10.0f;
 
-    static constexpr float MIN_ZOOM_FACTOR = 0.1f;  // Minimum zoom factor
-    static constexpr float MAX_ZOOM_FACTOR = 10.0f; // Maximum zoom factor
-
-//wxDECLARE_EVENT_TABLE();
+wxDECLARE_EVENT_TABLE();
 };
 
 #endif // IMAGE_CANVAS_H
