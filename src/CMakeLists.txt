@@ -10,7 +10,7 @@ endif()
 
 # Define the source files
 set(SRC_FILES
-        main.cpp
+        main.mm
         ImageCanvas.cpp
         ImageEditor.cpp
 )
