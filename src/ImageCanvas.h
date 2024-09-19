@@ -18,9 +18,6 @@ public:
 
 protected:
     void OnPaint(wxPaintEvent& evt);
-    void OnMouseDown(wxMouseEvent& evt);
-    void OnMouseUp(wxMouseEvent& evt);
-    void OnMouseMove(wxMouseEvent& evt);
 
     void OnGestureZoom(wxZoomGestureEvent& evt);
     void OnGesturePan(wxPanGestureEvent& evt);
@@ -36,7 +33,6 @@ private:
     std::function<void(float)> zoomCallback;  // Callback to update the zoom level in status bar
 
     void FitImageToCanvas();            // Function to fit and center the image on load
-    void ConstrainPan();                // Prevent image from being panned out of the visible area
 
     static constexpr float MIN_ZOOM_FACTOR = 0.1f;  // Minimum zoom factor
     static constexpr float MAX_ZOOM_FACTOR = 10.0f; // Maximum zoom factor

@@ -95,35 +95,31 @@ void ImageCanvas::OnPaint(wxPaintEvent& evt)
 // Handle macOS pinch-to-zoom gestures
 void ImageCanvas::OnGestureZoom(wxZoomGestureEvent& evt)
 {
-    // Get the current mouse position relative to the canvas only once
-    static wxPoint mousePos = ScreenToClient(wxGetMousePosition());
+    // Get the current mouse position relative to the canvas (recalculate every time)
+    wxPoint mousePos = ScreenToClient(wxGetMousePosition());
 
-    // Calculate the position of the mouse relative to the image (before zooming) just once
-    static float mouseImageX = (mousePos.x - offsetX) / zoomFactor;
-    static float mouseImageY = (mousePos.y - offsetY) / zoomFactor;
+    // Calculate the position of the mouse relative to the image (before zooming)
+    float mouseImageX = (mousePos.x - offsetX) / zoomFactor;
+    float mouseImageY = (mousePos.y - offsetY) / zoomFactor;
 
-    // Adjust the zoom factor based on the gesture's zoom factor
+    // Adjust the zoom factor based on the gesture's zoom factor with smoother scaling
     float zoomDelta = evt.GetZoomFactor();
-    float oldZoomFactor = zoomFactor;
-    zoomFactor = std::clamp(zoomFactor * zoomDelta, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
+    zoomFactor = std::clamp(zoomFactor * (1 + (zoomDelta - 1) * 0.5f), MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);  // Smoother zoom
 
-    // Only update if the zoom factor changes
-    if (std::fabs(zoomFactor - oldZoomFactor) > 0.01f)
+    // Update zoom level in status bar
+    if (zoomCallback)
     {
-        // Update zoom level in status bar
-        if (zoomCallback)
-        {
-            zoomCallback(zoomFactor);
-        }
-
-        // Recalculate the new offsets to ensure the point under the mouse remains the same
-        offsetX = mousePos.x - mouseImageX * zoomFactor;
-        offsetY = mousePos.y - mouseImageY * zoomFactor;
-
-        // Redraw the canvas after zooming
-        Refresh();
+        zoomCallback(zoomFactor);
     }
+
+    // Recalculate the new offsets to ensure the point under the mouse remains the same
+    offsetX = mousePos.x - mouseImageX * zoomFactor;
+    offsetY = mousePos.y - mouseImageY * zoomFactor;
+
+    // Redraw the canvas after zooming
+    Refresh();
 }
+
 
 // Handle macOS pan gestures (left, right, up, down)
 void ImageCanvas::OnGesturePan(wxPanGestureEvent& evt)
@@ -132,25 +128,5 @@ void ImageCanvas::OnGesturePan(wxPanGestureEvent& evt)
     offsetX += evt.GetDelta().x;  // Use GetPosition().x for the pan gesture's X delta
     offsetY += evt.GetDelta().y;  // Use GetPosition().y for the pan gesture's Y delta
 
-    ConstrainPan();  // Ensure the image stays within the canvas bounds
     Refresh();  // Redraw the canvas after panning
-}
-
-void ImageCanvas::ConstrainPan()
-{
-    wxSize clientSize = GetClientSize();
-    float scaledWidth = wxImg.GetWidth() * zoomFactor;
-    float scaledHeight = wxImg.GetHeight() * zoomFactor;
-
-    // Constrain horizontal panning
-    if (scaledWidth > clientSize.GetWidth())
-    {
-        offsetX = std::clamp(offsetX, clientSize.GetWidth() - scaledWidth, 0.0f);
-    }
-
-    // Constrain vertical panning
-    if (scaledHeight > clientSize.GetHeight())
-    {
-        offsetY = std::clamp(offsetY, clientSize.GetHeight() - scaledHeight, 0.0f);
-    }
 }
