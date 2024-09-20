@@ -1,6 +1,9 @@
 # Find OpenGL
 find_package(OpenGL REQUIRED)
 
+# Enable wxWidgets static linking
+set(wxWidgets_USE_STATIC 1)
+
 # Find wxWidgets, including the OpenGL (gl) component
 find_package(wxWidgets REQUIRED COMPONENTS core base gl)
 
