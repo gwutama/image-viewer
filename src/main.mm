@@ -1,6 +1,7 @@
 #include <wx/wx.h>
-#include "ImageEditor.h"
 #include <opencv2/opencv.hpp>
+#include "ImageEditor.h"
+#include "ImagePreview.h"
 
 // This will include the necessary Objective-C headers
 #ifdef __WXMAC__
@@ -21,6 +22,7 @@ public:
 
 private:
     ImageEditor* editor;
+    std::shared_ptr<ImagePreview> preview;
 
     void OnOpen(wxCommandEvent& event);
     void CreateMenuBar();
@@ -55,7 +57,8 @@ void MyApp::ForceDarkMode()
 MyFrame::MyFrame(const wxString& title)
         : wxFrame(NULL, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600))
 {
-    editor = new ImageEditor(this);
+    preview = std::make_shared<ImagePreview>();
+    editor = new ImageEditor(this, preview);
     editor->Disable();  // Disable the editor until an image is loaded
 
     // Create the menu bar
@@ -79,10 +82,22 @@ void MyFrame::OnOpen(wxCommandEvent& event)
     wxString filePath = openFileDialog.GetPath();
     cv::Mat image = cv::imread(filePath.ToStdString());
 
+    // Convert to RGBA format if necessary
+    if (image.channels() == 1) {
+        cv::cvtColor(image, image, cv::COLOR_GRAY2RGBA);
+    } else if (image.channels() == 3) {
+        cv::cvtColor(image, image, cv::COLOR_BGR2RGBA);
+    } else if (image.channels() != 4) {
+        std::cerr << "Error: Unsupported image format with " << image.channels() << " channels." << std::endl;
+    }
+
+    // convert image to std::shared_ptr<cv::UMat> so we can pass it to editor
+    std::shared_ptr<cv::UMat> imagePtr = std::make_shared<cv::UMat>(image.getUMat(cv::ACCESS_RW));
+
     if (!image.empty())
     {
         // Load the image into the canvas
-        editor->LoadImage(image);
+        editor->LoadImage(imagePtr);
         editor->Enable();  // Enable the editor after loading the image
     }
     else

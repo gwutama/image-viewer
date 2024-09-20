@@ -8,9 +8,10 @@ wxBEGIN_EVENT_TABLE(ImageCanvas, wxGLCanvas)
                 EVT_MOTION(ImageCanvas::OnMouseMove)
 wxEND_EVENT_TABLE()
 
-ImageCanvas::ImageCanvas(wxWindow* parent)
-        : wxGLCanvas(parent, wxID_ANY, nullptr), zoomFactor(1.0f), offsetX(0.0f), offsetY(0.0f),
-          imageLoaded(false), textureId(0), isDragging(false)
+ImageCanvas::ImageCanvas(wxWindow* parent, std::shared_ptr<ImagePreview> imagePreview)
+        : wxGLCanvas(parent, wxID_ANY, nullptr), imagePreview(imagePreview), zoomFactor(1.0f),
+          offsetX(0.0f), offsetY(0.0f), imageLoaded(false), textureId(0), isDragging(false),
+          currentLodLevel(ImagePreview::LodLevel::LOW)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     glContext = new wxGLContext(this);
@@ -28,42 +29,32 @@ ImageCanvas::~ImageCanvas()
     }
 }
 
-void ImageCanvas::LoadImage(const cv::Mat& img)
+void ImageCanvas::LoadImage(const std::shared_ptr<cv::UMat>& img)
 {
-    // Convert OpenCV image to wxImage
-    cv::Mat imgRGB;
-    if (img.channels() == 3)
-    {
-        cv::cvtColor(img, imgRGB, cv::COLOR_BGR2RGB);  // Convert BGR to RGB
-    }
-    else
-    {
-        imgRGB = img.clone();
-    }
+    imagePreview->LoadImage(img);  // Load the image into ImagePreview
 
-    wxImg = wxImage(imgRGB.cols, imgRGB.rows, imgRGB.data, true);
+    // Set the initial LOD level to LOW and get the image for display
+    imagePreview->SetLodLevel(ImagePreview::LodLevel::LOW);
+
     imageLoaded = true;
-
-    // Update OpenGL texture
-    UpdateTexture();
-
-    // Fit and center the image
+    UpdateTexture();  // Update OpenGL texture based on the new image
     FitImageToCanvas();
-
     Refresh();
 }
 
 void ImageCanvas::SetZoomLevel(float zoom)
 {
     zoomFactor = std::clamp(zoom, MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
+    UpdateLodLevel();  // Update LOD level based on the zoom factor
     Refresh();
 }
 
 void ImageCanvas::CenterImageOnCanvas()
 {
     wxSize clientSize = GetClientSize();
-    float scaledWidth = wxImg.GetWidth() * zoomFactor;
-    float scaledHeight = wxImg.GetHeight() * zoomFactor;
+    auto high_size = imagePreview->GetSize(ImagePreview::LodLevel::HIGH);
+    float scaledWidth = high_size.width * zoomFactor;
+    float scaledHeight = high_size.height * zoomFactor;
 
     offsetX = (clientSize.GetWidth() - scaledWidth) / 2.0f;
     offsetY = (clientSize.GetHeight() - scaledHeight) / 2.0f;
@@ -77,11 +68,32 @@ void ImageCanvas::FitImageToCanvas()
         return;
 
     wxSize clientSize = GetClientSize();
-    float scaleX = static_cast<float>(clientSize.GetWidth()) / wxImg.GetWidth();
-    float scaleY = static_cast<float>(clientSize.GetHeight()) / wxImg.GetHeight();
+    auto high_size = imagePreview->GetSize(ImagePreview::LodLevel::HIGH);
+    float scaleX = static_cast<float>(clientSize.GetWidth()) / high_size.width;
+    float scaleY = static_cast<float>(clientSize.GetHeight()) / high_size.height;
     zoomFactor = std::min(scaleX, scaleY);
 
+    UpdateLodLevel();  // Update the LOD level after fitting the image
     CenterImageOnCanvas();
+}
+
+void ImageCanvas::UpdateLodLevel()
+{
+    ImagePreview::LodLevel newLodLevel;
+
+    if (zoomFactor <= 0.5f)
+        newLodLevel = ImagePreview::LodLevel::LOW;
+    else if (zoomFactor <= 1.5f)
+        newLodLevel = ImagePreview::LodLevel::MEDIUM;
+    else
+        newLodLevel = ImagePreview::LodLevel::HIGH;
+
+    if (newLodLevel != currentLodLevel)
+    {
+        currentLodLevel = newLodLevel;
+        imagePreview->SetLodLevel(currentLodLevel);  // Inform ImagePreview of the new LOD level
+        UpdateTexture();  // Update the OpenGL texture with the new LOD image
+    }
 }
 
 void ImageCanvas::EnableGestures(bool enable)
@@ -133,11 +145,12 @@ void ImageCanvas::OnPaint(wxPaintEvent& evt)
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textureId);
 
+    auto high_size = imagePreview->GetSize(ImagePreview::LodLevel::HIGH);
     glBegin(GL_QUADS);
     glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f(wxImg.GetWidth(), 0.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f(wxImg.GetWidth(), wxImg.GetHeight());
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, wxImg.GetHeight());
+    glTexCoord2f(1.0f, 0.0f); glVertex2f(high_size.width, 0.0f);
+    glTexCoord2f(1.0f, 1.0f); glVertex2f(high_size.width, high_size.height);
+    glTexCoord2f(0.0f, 1.0f); glVertex2f(0.0f, high_size.height);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
@@ -166,7 +179,7 @@ void ImageCanvas::OnMouseUp(wxMouseEvent& event)
 {
     if (event.LeftUp())
     {
-        SetCursor(wxCursor(wxCURSOR_NONE));
+        SetCursor(wxCursor(wxCURSOR_DEFAULT));
         isDragging = false;
     }
 }
@@ -188,32 +201,24 @@ void ImageCanvas::OnMouseMove(wxMouseEvent& event)
 
 void ImageCanvas::OnGestureZoom(wxZoomGestureEvent& evt)
 {
-    // Get the current mouse position relative to the canvas
     wxPoint mousePos = ScreenToClient(wxGetMousePosition());
 
-    // Calculate the position of the mouse relative to the image (before zooming)
     float mouseImageX = (mousePos.x - offsetX) / zoomFactor;
     float mouseImageY = (mousePos.y - offsetY) / zoomFactor;
 
-    // Get the zoom factor from the gesture event
     float zoomDelta = evt.GetZoomFactor();
+    zoomFactor = std::clamp(zoomFactor * (1 + (zoomDelta - 1) * 0.2f), MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
 
-    // Scale zoomDelta to smooth the zoom operation
-    float newZoomFactor = std::clamp(zoomFactor * (1 + (zoomDelta - 1) * 0.2f), MIN_ZOOM_FACTOR, MAX_ZOOM_FACTOR);
+    UpdateLodLevel();  // Update the LOD level after zooming
 
-    zoomFactor = newZoomFactor;
-
-    // Recalculate the offsets so that the point under the mouse stays under the mouse after zooming
     offsetX = mousePos.x - mouseImageX * zoomFactor;
     offsetY = mousePos.y - mouseImageY * zoomFactor;
 
-    // Update the zoom level in the status bar or UI if necessary
     if (zoomCallback)
     {
         zoomCallback(zoomFactor);
     }
 
-    // Redraw the canvas with the new zoom level
     Refresh();
 }
 
@@ -235,5 +240,8 @@ void ImageCanvas::UpdateTexture()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wxImg.GetWidth(), wxImg.GetHeight(), 0, GL_RGB, GL_UNSIGNED_BYTE, wxImg.GetData());
+    // Get the current LOD image from ImagePreview
+    auto img = imagePreview->GetImage();
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.cols, img.rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

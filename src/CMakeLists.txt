@@ -13,6 +13,7 @@ set(SRC_FILES
         main.mm
         ImageCanvas.cpp
         ImageEditor.cpp
+        ImagePreview.cpp
 )
 
 # Include directories

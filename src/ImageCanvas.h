@@ -4,15 +4,16 @@
 #include <wx/wx.h>
 #include <wx/glcanvas.h>
 #include <opencv2/opencv.hpp>
+#include "ImagePreview.h"
 
 class ImageCanvas : public wxGLCanvas
 {
 public:
-    ImageCanvas(wxWindow* parent);
+    ImageCanvas(wxWindow* parent, std::shared_ptr<ImagePreview> imagePreview);
     ~ImageCanvas();
 
-    // Load a single image
-    void LoadImage(const cv::Mat& img);
+    // Load image into ImagePreview
+    void LoadImage(const std::shared_ptr<cv::UMat>& img);
 
     // Set zoom level manually
     void SetZoomLevel(float zoom);
@@ -43,10 +44,10 @@ protected:
     void OnGestureZoom(wxZoomGestureEvent& evt);
 
 private:
-    void InitializeOpenGL();            // OpenGL initialization
     void UpdateTexture();               // Update OpenGL texture
+    void UpdateLodLevel();              // Update the LOD level based on zoom
 
-    wxImage wxImg;                      // wxImage to store the loaded image
+    std::shared_ptr<ImagePreview> imagePreview;  // ImagePreview object
     bool imageLoaded;                   // Flag to check if an image is loaded
     GLuint textureId;                   // OpenGL texture ID
     wxGLContext* glContext;             // OpenGL context
@@ -60,7 +61,9 @@ private:
     std::function<void(float)> zoomCallback;  // Callback to update zoom level in status bar
 
     static constexpr float MIN_ZOOM_FACTOR = 0.1f;  // Minimum zoom factor
-    static constexpr float MAX_ZOOM_FACTOR = 4.0f; // Maximum zoom factor
+    static constexpr float MAX_ZOOM_FACTOR = 4.0f;  // Maximum zoom factor
+
+    ImagePreview::LodLevel currentLodLevel;   // Current LOD level
 
 wxDECLARE_EVENT_TABLE();
 };

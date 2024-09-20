@@ -4,11 +4,11 @@ wxBEGIN_EVENT_TABLE(ImageEditor, wxPanel)
                 EVT_COMBOBOX(wxID_ANY, ImageEditor::OnZoomSelection)
 wxEND_EVENT_TABLE()
 
-ImageEditor::ImageEditor(wxWindow* parent)
-        : wxPanel(parent)
+ImageEditor::ImageEditor(wxWindow* parent, std::shared_ptr<ImagePreview> imagePreview)
+        : wxPanel(parent), imagePreview(imagePreview)
 {
     // Create ImageCanvas for viewing images
-    imageCanvas = new ImageCanvas(this);
+    imageCanvas = new ImageCanvas(this, imagePreview);
     imageCanvas->EnableGestures(true);
 
     // Create combo box for zoom levels
@@ -44,7 +44,7 @@ ImageEditor::ImageEditor(wxWindow* parent)
     });
 }
 
-void ImageEditor::LoadImage(const cv::Mat& img)
+void ImageEditor::LoadImage(std::shared_ptr<cv::UMat> img)
 {
     imageCanvas->LoadImage(img);
     zoomComboBox->SetSelection(0);  // Default to "Fit to screen" when a new image is loaded
